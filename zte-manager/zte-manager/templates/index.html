@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZTE Manager</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --panel: #131a24;
+    --panel-2: #1a2330;
+    --border: #263140;
+    --text: #dbe4ee;
+    --text-dim: #7d8ba0;
+    --accent: #3fb98a;
+    --warn: #e0a030;
+    --danger: #e15b5b;
+    --mono: "JetBrains Mono", "SF Mono", Consolas, monospace;
+    --sans: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+  }
+  header {
+    padding: 20px 28px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  header h1 {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0;
+    letter-spacing: 0.2px;
+  }
+  header h1 span { color: var(--text-dim); font-weight: 400; }
+  .stats {
+    display: flex;
+    gap: 20px;
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--text-dim);
+  }
+  .stats b { color: var(--text); }
+  main { padding: 24px 28px; max-width: 1100px; margin: 0 auto; }
+  .searchbar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+  .searchbar input[type=text] {
+    flex: 1;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 11px 14px;
+    color: var(--text);
+    font-size: 14px;
+    outline: none;
+  }
+  .searchbar input[type=text]:focus { border-color: var(--accent); }
+  .searchbar select {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 11px 12px;
+    color: var(--text);
+    font-size: 13px;
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  thead th {
+    text-align: left;
+    padding: 8px 12px;
+    color: var(--text-dim);
+    font-weight: 500;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+  }
+  tbody td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  tbody tr:hover { background: var(--panel-2); }
+  .mono { font-family: var(--mono); }
+  .status-dot {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    margin-right: 7px;
+  }
+  .online { background: var(--accent); }
+  .offline { background: var(--danger); }
+  .rx-ok { color: var(--accent); }
+  .rx-warn { color: var(--warn); }
+  .rx-bad { color: var(--danger); }
+  .rx-na { color: var(--text-dim); }
+  .empty {
+    text-align: center;
+    padding: 40px 0;
+    color: var(--text-dim);
+    font-size: 13.5px;
+  }
+  .olt-pill {
+    font-size: 11px;
+    color: var(--text-dim);
+    font-family: var(--mono);
+  }
+  .btn {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 9px 14px;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .btn:hover { border-color: var(--accent); }
+  .btn-primary { background: var(--accent); border-color: var(--accent); color: #08130f; font-weight: 600; }
+  .btn-primary:hover { opacity: 0.9; }
+  .btn-danger { color: var(--danger); }
+
+  .olt-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 18px;
+  }
+  .olt-chip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 6px 6px 6px 14px;
+    font-size: 12.5px;
+  }
+  .olt-chip .host { color: var(--text-dim); font-family: var(--mono); }
+  .olt-chip button {
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+  }
+  .olt-chip button:hover { color: var(--danger); background: rgba(225,91,91,0.12); }
+
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.55);
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 24px;
+    width: 420px;
+    max-width: 92vw;
+  }
+  .modal h2 { margin: 0 0 16px 0; font-size: 16px; }
+  .field { margin-bottom: 12px; }
+  .field label { display: block; font-size: 12px; color: var(--text-dim); margin-bottom: 5px; }
+  .field input, .field select {
+    width: 100%;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 9px 10px;
+    color: var(--text);
+    font-size: 13.5px;
+  }
+  .field-row { display: flex; gap: 10px; }
+  .field-row .field { flex: 1; }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
+  .form-error { color: var(--danger); font-size: 12.5px; margin-top: 8px; min-height: 16px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>ZTE Manager <span>&mdash; cari pelanggan &amp; cek redaman</span></h1>
+  <div class="stats">
+    <div>ONU: <b>{{ total_onu }}</b></div>
+    <div>Online: <b>{{ online_onu }}</b></div>
+    <div>OLT terpantau: <b>{{ olts|length }}</b></div>
+  </div>
+</header>
+
+<main>
+  <div class="olt-list" id="oltList">
+    <!-- diisi lewat JS dari /api/olts, termasuk tombol hapus -->
+  </div>
+
+  <div class="searchbar">
+    <input id="q" type="text" placeholder="Cari nama pelanggan, serial number, atau deskripsi ONU..." autofocus>
+    <select id="oltFilter">
+      <option value="">Semua OLT</option>
+      {% for o in olts %}
+      <option value="{{ o.id }}">{{ o.name }}</option>
+      {% endfor %}
+    </select>
+    <button class="btn btn-primary" id="openAddOlt" type="button">+ Tambah OLT</button>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Status</th>
+        <th>Nama / Deskripsi</th>
+        <th>Serial Number</th>
+        <th>OLT</th>
+        <th>Redaman (RX)</th>
+        <th>Jarak</th>
+      </tr>
+    </thead>
+    <tbody id="results">
+      <tr><td colspan="6" class="empty">Ketik untuk mulai mencari pelanggan...</td></tr>
+    </tbody>
+  </table>
+</main>
+
+<div class="modal-overlay" id="addOltModal">
+  <div class="modal">
+    <h2>Tambah OLT</h2>
+    <div class="field">
+      <label>Nama OLT</label>
+      <input id="f_name" type="text" placeholder="OLT C300 - Kebayoran Lama Utara">
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>IP / Host</label>
+        <input id="f_host" type="text" placeholder="192.168.10.1">
+      </div>
+      <div class="field">
+        <label>SNMP Community</label>
+        <input id="f_community" type="text" placeholder="public">
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Profile OID</label>
+        <select id="f_profile"></select>
+      </div>
+      <div class="field">
+        <label>SNMP Version</label>
+        <select id="f_version">
+          <option value="2c">2c</option>
+          <option value="1">1</option>
+        </select>
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Board/Slot (pisah koma)</label>
+        <input id="f_boards" type="text" placeholder="1,2,3,4">
+      </div>
+      <div class="field">
+        <label>PON per Board</label>
+        <input id="f_pons" type="text" placeholder="16" value="16">
+      </div>
+    </div>
+    <div class="form-error" id="f_error"></div>
+    <div class="modal-actions">
+      <button class="btn" type="button" id="cancelAddOlt">Batal</button>
+      <button class="btn btn-primary" type="button" id="submitAddOlt">Simpan &amp; Poll</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const qInput = document.getElementById('q');
+const oltFilter = document.getElementById('oltFilter');
+const results = document.getElementById('results');
+let debounceTimer = null;
+
+function rxClass(rx) {
+  if (rx === null || rx === undefined) return 'rx-na';
+  if (rx >= -25) return 'rx-ok';
+  if (rx >= -28) return 'rx-warn';
+  return 'rx-bad';
+}
+
+function render(rows) {
+  if (!rows.length) {
+    results.innerHTML = '<tr><td colspan="6" class="empty">Tidak ada pelanggan yang cocok.</td></tr>';
+    return;
+  }
+  results.innerHTML = rows.map(r => `
+    <tr>
+      <td><span class="status-dot ${r.is_online ? 'online' : 'offline'}"></span>${r.is_online ? 'Online' : 'Offline'}</td>
+      <td>${r.name || '<span class="rx-na">(tanpa nama)</span>'}${r.description ? `<br><span class="olt-pill">${r.description}</span>` : ''}</td>
+      <td class="mono">${r.serial_number || '-'}</td>
+      <td class="olt-pill">${r.olt_name || r.olt_id}</td>
+      <td class="mono ${rxClass(r.rx_power_dbm)}">${r.rx_power_dbm !== null ? r.rx_power_dbm.toFixed(2) + ' dBm' : '-'}</td>
+      <td class="mono">${r.distance_m !== null && r.distance_m !== undefined ? r.distance_m + ' m' : '-'}</td>
+    </tr>
+  `).join('');
+}
+
+async function doSearch() {
+  const q = qInput.value.trim();
+  const olt = oltFilter.value;
+  const params = new URLSearchParams({ q, olt_id: olt });
+  const res = await fetch('/api/search?' + params.toString());
+  const rows = await res.json();
+  render(rows);
+}
+
+qInput.addEventListener('input', () => {
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(doSearch, 200);
+});
+oltFilter.addEventListener('change', doSearch);
+
+// tampilkan data awal (semua pelanggan) begitu halaman dibuka
+doSearch();
+
+// ---------------- Manajemen daftar OLT ----------------
+
+const oltListEl = document.getElementById('oltList');
+const modal = document.getElementById('addOltModal');
+const openBtn = document.getElementById('openAddOlt');
+const cancelBtn = document.getElementById('cancelAddOlt');
+const submitBtn = document.getElementById('submitAddOlt');
+const errorEl = document.getElementById('f_error');
+const profileSelect = document.getElementById('f_profile');
+
+async function loadOlts() {
+  const res = await fetch('/api/olts');
+  const olts = await res.json();
+
+  // render chip list + tombol hapus
+  if (!olts.length) {
+    oltListEl.innerHTML = '<span class="olt-pill">Belum ada OLT terdaftar. Klik "+ Tambah OLT" untuk mulai.</span>';
+  } else {
+    oltListEl.innerHTML = olts.map(o => `
+      <div class="olt-chip">
+        <span>${o.name}</span>
+        <span class="host">${o.host}</span>
+        <button title="Hapus OLT ini" onclick="deleteOlt(${o.id}, '${o.name.replace(/'/g, "\\'")}')">&times;</button>
+      </div>
+    `).join('');
+  }
+
+  // sinkronkan dropdown filter pencarian juga
+  const current = oltFilter.value;
+  oltFilter.innerHTML = '<option value="">Semua OLT</option>' +
+    olts.map(o => `<option value="${o.id}">${o.name}</option>`).join('');
+  oltFilter.value = current;
+}
+
+async function loadProfiles() {
+  const res = await fetch('/api/profiles');
+  const profiles = await res.json();
+  profileSelect.innerHTML = profiles.map(p => `<option value="${p.key}">${p.label}</option>`).join('');
+}
+
+async function deleteOlt(id, name) {
+  if (!confirm(`Hapus OLT "${name}"? Semua data pelanggan yang tercache dari OLT ini juga akan dihapus.`)) return;
+  await fetch('/api/olts/' + id, { method: 'DELETE' });
+  await loadOlts();
+  await doSearch();
+}
+
+function openModal() {
+  document.getElementById('f_name').value = '';
+  document.getElementById('f_host').value = '';
+  document.getElementById('f_community').value = '';
+  document.getElementById('f_boards').value = '';
+  document.getElementById('f_pons').value = '16';
+  errorEl.textContent = '';
+  modal.classList.add('show');
+}
+
+function closeModal() {
+  modal.classList.remove('show');
+}
+
+openBtn.addEventListener('click', openModal);
+cancelBtn.addEventListener('click', closeModal);
+modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+
+submitBtn.addEventListener('click', async () => {
+  const payload = {
+    name: document.getElementById('f_name').value.trim(),
+    host: document.getElementById('f_host').value.trim(),
+    snmp_community: document.getElementById('f_community').value.trim(),
+    snmp_version: document.getElementById('f_version').value,
+    profile: profileSelect.value,
+    boards: document.getElementById('f_boards').value.trim(),
+    pons_per_board: parseInt(document.getElementById('f_pons').value || '16', 10),
+  };
+
+  if (!payload.name || !payload.host || !payload.snmp_community) {
+    errorEl.textContent = 'Nama, IP/host, dan SNMP community wajib diisi.';
+    return;
+  }
+
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Menyimpan...';
+  try {
+    const res = await fetch('/api/olts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      errorEl.textContent = err.detail || 'Gagal menyimpan OLT.';
+      return;
+    }
+    closeModal();
+    await loadOlts();
+    await doSearch();
+  } catch (e) {
+    errorEl.textContent = 'Terjadi kesalahan jaringan.';
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Simpan & Poll';
+  }
+});
+
+loadOlts();
+loadProfiles();
+</script>
+
+</body>
+</html>
