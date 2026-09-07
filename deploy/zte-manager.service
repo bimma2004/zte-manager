@@ -1,0 +1,15 @@
+[Unit]
+Description=ZTE Manager - search pelanggan & cek redaman
+After=network.target
+
+[Service]
+Type=simple
+User=bimma
+WorkingDirectory=/opt/zte-manager
+Environment="ZTE_MANAGER_CONFIG=/opt/zte-manager/config.yaml"
+ExecStart=/opt/zte-manager/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8090
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

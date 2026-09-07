@@ -1,0 +1,75 @@
+# =============================================================================
+# config.yaml - Konfigurasi ZTE Manager
+# Copy file ini jadi config.yaml lalu sesuaikan.
+# =============================================================================
+
+app:
+  poll_interval_seconds: 300   # seberapa sering poller SNMP jalan (5 menit default)
+  db_path: "data/zte_manager.db"
+  timezone: "Asia/Jakarta"
+
+# -----------------------------------------------------------------------------
+# Daftar semua OLT ZTE yang mau dipantau.
+# "profile" merujuk ke salah satu key di bagian oid_profiles di bawah.
+# Kalau belum yakin OLT-nya profile mana, jalankan discover_oids.py dulu.
+# -----------------------------------------------------------------------------
+olts:
+  - id: "olt-01"
+    name: "OLT C300 - Kebayoran Lama Utara"
+    host: "192.168.10.1"
+    snmp_community: "public"      # ganti ke community read punya kamu
+    snmp_version: "2c"
+    profile: "zte_c300"
+    boards: [1, 2, 3, 4]          # nomor slot/board GPON yang terisi
+    pons_per_board: 16            # jumlah port PON per board (cek `show card`)
+
+  # - id: "olt-02"
+  #   name: "OLT C320 - Cabang 2"
+  #   host: "192.168.10.2"
+  #   snmp_community: "public"
+  #   snmp_version: "2c"
+  #   profile: "zte_c320_v22"
+  #   boards: [1, 2]
+  #   pons_per_board: 16
+
+# -----------------------------------------------------------------------------
+# OID Profiles per model/firmware ZTE.
+# PENTING: rx_power terutama sering beda per firmware dan BELUM 100% pasti
+# tanpa verifikasi langsung ke device. Jalankan discover_oids.py ke tiap OLT,
+# bandingkan hasilnya dengan "show pon power onu-rx" di CLI OLT tsb, lalu
+# perbaiki nilai di bawah kalau perlu.
+#
+# Semua OID di bawah adalah SUFFIX yang akan digabung ke base_oid.
+# Contoh: base_oid ".1.3.6.1.4.1.3902.1012.3" + onu_name ".28.1.1.2"
+#         = ".1.3.6.1.4.1.3902.1012.3.28.1.1.2"
+# -----------------------------------------------------------------------------
+oid_profiles:
+
+  zte_c300:
+    label: "ZTE ZXA10 C300 / C320 firmware lama (zxGpon MIB, base .1012)"
+    base_oid: ".1.3.6.1.4.1.3902.1012.3"
+    columns:
+      onu_name: ".28.1.1.2"            # zxGponOntDevMgmtName -> biasanya nama pelanggan
+      onu_description: ".28.1.1.3"     # zxGponOntDevMgmtDescription
+      serial_number: ".28.1.1.5"       # zxGponOntDevMgmtProvisionSn
+      admin_state: ".50.11.2.1.7"      # zxGponONTAdminState (1=enable)
+      oper_state: ".50.11.2.1.8"       # zxGponONTOperState (1=online/up)
+      distance_m: ".11.4.1.2"          # zxGponRTDDistance (meter)
+      uptime: ".50.11.2.1.20"          # zxGponOnuSysUpTime
+      rx_power: ".50.12.1.1.14"        # BELUM PASTI - verifikasi via discover_oids.py
+    rx_power_scale: 0.01               # sering nilai raw perlu dibagi 100 -> dBm (cek pas discovery)
+    status_ok_value: "1"
+
+  zte_c320_v22:
+    label: "ZTE ZXA10 C320 firmware v2.2+ (base .1082.500)"
+    base_oid: ".1.3.6.1.4.1.3902.1082"
+    columns:
+      onu_name: ".500.10.2.3.3.1.2"
+      serial_number: ".500.10.2.3.3.1.18"
+      onu_type: ".3.50.11.2.1.17"
+      rx_power: ".500.20.2.2.2.1.10"   # BELUM PASTI - verifikasi via discover_oids.py
+      last_online: ".500.10.2.3.8.1.5"
+      last_offline: ".500.10.2.3.8.1.6"
+      last_offline_reason: ".500.10.2.3.8.1.7"
+    rx_power_scale: 0.01
+    status_ok_value: "1"
